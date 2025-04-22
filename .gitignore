@@ -1,0 +1,8 @@
+#  Chứa nhưngx file k đẩy lên 
+/node_modules
+/vender
+/.idea
+.idea/
+.env
+
+CACHE
