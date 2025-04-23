@@ -22,7 +22,7 @@ let postCRUD = async(req,res) =>{
     console.log(messsage)
     return res.send('cRUD form view sever ')
 }
-let displayGetSRUD = async(req,res)=>{
+let displayGetCRUD = async(req,res)=>{
     let data= await SRUDService.getAllUser();
     return res.render('displayCRUD.ejs', {
         dataTable: data
@@ -65,7 +65,7 @@ module.exports={
     getAboutPage: getAboutPage,
     getCRUD: getCRUD,
     postCRUD: postCRUD,
-    displayGetSRUD:displayGetSRUD,
+    displayGetCRUD:displayGetCRUD,
     getEditCRUD: getEditCRUD,
     putCRUD:putCRUD,
     deleteCRUD:deleteCRUD
