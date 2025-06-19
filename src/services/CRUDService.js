@@ -4,7 +4,7 @@ import { raw } from 'body-parser';
 import { where } from 'sequelize';
 
 const salt = bcrypt.genSaltSync(10);
-
+// chứa các thao tác CRUD của người dùng trong hệ thống
 let createNewUser = async (data) =>{
     return new Promise(async(resolve,reject) =>{
         try {
