@@ -116,6 +116,7 @@ let createNewUser = (data) => {
           gender: data.gender,
           positionId: data.positionId,
           roleId: data.roleId,
+          image: data.image,
         });
       }
 
@@ -171,6 +172,7 @@ let updateUserData = (data) => {
         user.positionId = data.positionId;
         user.gender = data.gender;
         user.phonenumber = data.phonenumber;
+        user.image = data.image;
 
         await user.save(); //Lưu lại thông tin user
 
