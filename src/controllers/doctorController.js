@@ -15,5 +15,30 @@ let getTopDoctorHome = async (req, res) => {
     });
   }
 };
-
-module.exports = { getTopDoctorHome };
+let getAllDoctor = async (req, res) => {
+  try {
+    let doctors = await doctorService.getAllDoctor(); // gọi service để lấy tất cả bác sĩ
+    return res.status(200).json(doctors);
+  } catch (error) {
+    return res.status(200).json({
+      errCode: -1, // mã lỗi 1 - có lỗi xảy ra
+      message: "Error from server", // thông báo lỗi
+    });
+  }
+};
+let postInfoDoctor = async (req, res) => {
+  try {
+    let response = await doctorService.postInfoDoctor(req.body); // gọi service để lưu thông tin bác sĩ
+    return res.status(200).json(response); // trả về thông báo thành công
+  } catch (error) {
+    return res.status(200).json({
+      errCode: -1, // mã lỗi 1 - có lỗi xảy ra
+      message: "Error from server", // thông báo lỗi
+    });
+  }
+};
+module.exports = {
+  getTopDoctorHome: getTopDoctorHome,
+  getAllDoctor: getAllDoctor,
+  postInfoDoctor: postInfoDoctor,
+};
