@@ -37,8 +37,20 @@ let postInfoDoctor = async (req, res) => {
     });
   }
 };
+let getDetailDoctorById = async (req, res) => {
+  try {
+    let response = await doctorService.getDetailDoctorById(req.query.id); // gọi service để lấy chi tiết bác sĩ theo id
+    return res.status(200).json(response); // trả về thông tin chi tiết bác sĩ
+  } catch (error) {
+    return res.status(200).json({
+      errCode: -1, // mã lỗi 1 - có lỗi xảy ra
+      message: "Error from server", // thông báo lỗi
+    });
+  }
+};
 module.exports = {
   getTopDoctorHome: getTopDoctorHome,
   getAllDoctor: getAllDoctor,
   postInfoDoctor: postInfoDoctor,
+  getDetailDoctorById: getDetailDoctorById,
 };

@@ -1,5 +1,6 @@
 import { raw } from "body-parser";
 import db from "../models/index";
+import { where } from "sequelize";
 let getTopDoctorHome = (limit) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -97,8 +98,43 @@ let postInfoDoctor = (data) => {
     }
   });
 };
+let getDetailDoctorById = (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (id === undefined || id === null) {
+        resolve({
+          errCode: 1,
+          message: "Missing required parameters",
+        });
+      } else {
+        let data = await db.User.findOne({
+          where: { id: id },
+          attributes: {
+            exclude: ["password", "image"],
+          },
+          include: {
+            model: db.Markdown,
+            attributes: ["contentHTML", "contentMarkdown", "description"],
+            model: db.Allcode,
+            as: "positionData",
+            attributes: ["valueEn", "valueVi"],
+          },
+          raw: true,
+          nest: true,
+        });
+        resolve({
+          errCode: 0,
+          data: data ? data : {},
+        });
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 module.exports = {
   getTopDoctorHome,
   getAllDoctor,
   postInfoDoctor,
+  getDetailDoctorById,
 };
