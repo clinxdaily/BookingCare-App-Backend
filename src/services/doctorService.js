@@ -1,6 +1,10 @@
 import { raw } from "body-parser";
 import db from "../models/index";
 import { where } from "sequelize";
+require("dotenv").config();
+import _ from "lodash";
+
+const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 let getTopDoctorHome = (limit) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -138,9 +142,94 @@ let getDetailDoctorById = (id) => {
     }
   });
 };
+let bulkCreateSchedule = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!data.arrSchedule || !data.doctorId || !data.formattedDate) {
+        return resolve({
+          errCode: 1,
+          errMessage: "Missing required parameters",
+        });
+      }
+
+      let schedule = data.arrSchedule.map((item) => ({
+        ...item,
+        maxNumber: MAX_NUMBER_SCHEDULE,
+      }));
+
+      // Lấy các lịch đã tồn tại
+      let existing = await db.Schedule.findAll({
+        where: {
+          doctorId: data.doctorId,
+          date: data.formattedDate,
+        },
+        attributes: ["timeType", "date", "doctorId", "maxNumber"],
+        raw: true,
+      });
+
+      // Chuyển date về dạng timestamp để so sánh
+      existing = existing.map((item) => ({
+        ...item,
+        date: new Date(item.date).getTime(),
+      }));
+
+      // So sánh và chỉ lấy những lịch mới chưa có
+      let toCreate = _.differenceWith(schedule, existing, (a, b) => {
+        return a.timeType === b.timeType && a.date === b.date;
+      });
+
+      // Nếu không có gì để tạo
+      if (!toCreate || toCreate.length === 0) {
+        return resolve({
+          errCode: 0,
+          errMessage: "No new schedule to create",
+        });
+      }
+
+      // Nếu có thì tạo
+      await db.Schedule.bulkCreate(toCreate);
+
+      return resolve({
+        errCode: 0,
+        errMessage: "Create schedules successfully",
+      });
+    } catch (error) {
+      console.error("Error in bulkCreateSchedule:", error);
+      return reject(error);
+    }
+  });
+};
+let getScheduleDoctorByDate = (doctorId, date) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!doctorId || !date) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameters",
+        });
+      } else {
+        let data = await db.Schedule.findAll({
+          where: {
+            doctorId: doctorId,
+            date: date,
+          },
+        });
+        if (!data) {
+          data = [];
+        }
+        resolve({ errCode: 0, data: data });
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
 module.exports = {
   getTopDoctorHome,
   getAllDoctor,
   postInfoDoctor,
   getDetailDoctorById,
+  bulkCreateSchedule,
+  getScheduleDoctorByDate,
 };
