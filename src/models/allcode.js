@@ -16,6 +16,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "gender",
         as: "genderData", // alias for association
       });
+      Allcode.hasMany(models.Schedule, {
+        foreignKey: "timeType",
+        as: "timeTypeData", // alias for association
+      });
     }
   }
   Allcode.init(

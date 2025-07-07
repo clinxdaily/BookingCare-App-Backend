@@ -167,15 +167,9 @@ let bulkCreateSchedule = (data) => {
         raw: true,
       });
 
-      // Chuyển date về dạng timestamp để so sánh
-      existing = existing.map((item) => ({
-        ...item,
-        date: new Date(item.date).getTime(),
-      }));
-
       // So sánh và chỉ lấy những lịch mới chưa có
       let toCreate = _.differenceWith(schedule, existing, (a, b) => {
-        return a.timeType === b.timeType && a.date === b.date;
+        return a.timeType === b.timeType && +a.date === +b.date;
       });
 
       // Nếu không có gì để tạo
@@ -213,6 +207,15 @@ let getScheduleDoctorByDate = (doctorId, date) => {
             doctorId: doctorId,
             date: date,
           },
+          include: [
+            {
+              model: db.Allcode,
+              as: "timeTypeData",
+              attributes: ["valueEn", "valueVi"],
+            },
+          ],
+          raw: false,
+          nest: true,
         });
         if (!data) {
           data = [];
