@@ -17,7 +17,9 @@ let postBookAppointment = (data) => {
         !data.doctorId ||
         !data.date ||
         !data.timeType ||
-        !data.fullName
+        !data.fullName ||
+        !data.selectedGender ||
+        !data.address
       ) {
         resolve({
           errCode: 1,
@@ -35,7 +37,13 @@ let postBookAppointment = (data) => {
         });
         let user = await db.User.findOrCreate({
           where: { email: data.email },
-          defaults: { email: data.email, roleId: "R3" },
+          defaults: {
+            email: data.email,
+            roleId: "R3",
+            address: data.address,
+            gender: data.selectedGender,
+            firstName: data.fullName,
+          },
         });
         if (user && user[0]) {
           await db.Booking.findOrCreate({

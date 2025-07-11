@@ -61,4 +61,60 @@ let getBodyHTMLEmail = (language, dataSend) => {
   }
   return result;
 };
-module.exports = { sendSimpleEmail: sendSimpleEmail };
+let getBodyHTMLEmailRemedy = (language, dataSend) => {
+  let result = "";
+  if (language === "vi") {
+    result = `
+        <h3>Xin chào,${dataSend.patientName}</h3>
+        <p>Bạn nhận được email này vì bác sĩ đã gửi đơn thuốc/báo cáo sau buổi khám từ <strong>HealthCare</strong>.</p>
+        <p>Vui lòng kiểm tra file đính kèm để xem chi tiết kết quả/đơn thuốc.</p>
+        <p>Trân trọng,<br/>HealthCare - Nền tảng chăm sóc sức khỏe toàn diện</p>
+      `;
+  }
+
+  if (language === "en") {
+    result = `
+        <h3>Dear,${dataSend.patientName}</h3>
+        <p>You received this email because your doctor has sent you a prescription/report from <strong>HealthCare</strong>.</p>
+        <p>Please check the attached file for more information.</p>
+        <p>Sincerely,<br/>HealthCare – Comprehensive Health Care Platform</p>
+      `;
+  }
+
+  return result;
+};
+let sendAttachmentEmail = async (dataSend) => {
+  let transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_APP,
+      pass: process.env.EMAIL_APP_PASSWORD,
+    },
+    tls: {
+      rejectUnauthorized: false, // ⚠️ không kiểm tra chứng chỉ SSL
+    },
+  });
+
+  let info = await transporter.sendMail({
+    from: '"HealthCare 👨‍⚕️" <bhcuonggg@gmail.com>',
+    to: dataSend.email,
+    subject: "Kết quả đặt lịch khám bệnh tại HealthCare",
+
+    html: getBodyHTMLEmailRemedy(dataSend.language, dataSend),
+    attachments: [
+      {
+        filename: `remedy-${dataSend.patientId}-${new Date().getTime()}.png`,
+        content: dataSend.imgBase64.split("base64,")[1], // buffer chứa nội dung file
+        encoding: "base64", // mã hóa base64
+      },
+    ],
+  });
+
+  console.log("Email sent:", info.messageId);
+};
+module.exports = {
+  sendSimpleEmail: sendSimpleEmail,
+  sendAttachmentEmail: sendAttachmentEmail,
+};

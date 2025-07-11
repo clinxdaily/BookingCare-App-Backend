@@ -4,7 +4,7 @@ import { where } from "sequelize";
 require("dotenv").config();
 import _, { includes, reject } from "lodash";
 import clinic from "../models/clinic";
-
+import emailService from "./emailService";
 const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 let getTopDoctorHome = (limit) => {
   return new Promise(async (resolve, reject) => {
@@ -399,6 +399,93 @@ let getProfileDoctorById = (doctorId) => {
     }
   });
 };
+let getListPatientForDoctor = (doctorId, date) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!doctorId || !date) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameters",
+        });
+      } else {
+        let data = await db.Booking.findAll({
+          where: {
+            statusId: "S2", // S2 is the status for confirmed appointments
+            doctorId: doctorId,
+            date: date,
+          },
+          include: [
+            {
+              model: db.User,
+              as: "patientData",
+              attributes: ["firstName", "address", "email", "gender"],
+              include: [
+                {
+                  model: db.Allcode,
+                  as: "genderData",
+                  attributes: ["valueEn", "valueVi"],
+                },
+              ],
+            },
+            {
+              model: db.Allcode,
+              as: "timeTypeDataPatient",
+              attributes: ["valueEn", "valueVi"],
+            },
+          ],
+          raw: false,
+          nest: true,
+        });
+        if (!data) {
+          data = [];
+        }
+        resolve({ errCode: 0, data: data });
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+let sendRemedy = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (
+        !data.email ||
+        !data.doctorId ||
+        !data.patientId ||
+        !data.timeType ||
+        !data.imgBase64
+      ) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameters",
+        });
+      } else {
+        // Update the booking status to S3 (sent remedy)
+        let booking = await db.Booking.findOne({
+          where: {
+            patientId: data.patientId,
+            doctorId: data.doctorId,
+            timeType: data.timeType,
+            statusId: "S2", // S2 is the status for confirmed appointments
+          },
+          raw: false,
+        });
+        if (booking) {
+          booking.statusId = "S3"; // S3 is the status for sent remedy
+          await booking.save();
+        }
+        await emailService.sendAttachmentEmail(data);
+        resolve({
+          errCode: 0,
+          errMessage: "Send remedy successfully",
+        });
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 module.exports = {
   getTopDoctorHome,
   getAllDoctor,
@@ -408,4 +495,6 @@ module.exports = {
   getScheduleDoctorByDate,
   getExtraInfoDoctorById,
   getProfileDoctorById,
+  getListPatientForDoctor,
+  sendRemedy,
 };

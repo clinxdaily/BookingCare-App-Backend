@@ -20,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "timeType",
         as: "timeTypeData", // alias for association
       });
+      Allcode.hasMany(models.Booking, {
+        foreignKey: "timeType",
+        as: "timeTypeDataPatient", // alias for association
+      });
       Allcode.hasMany(models.Doctor_Info, {
         foreignKey: "priceId",
         as: "priceTypeData", // alias for association
