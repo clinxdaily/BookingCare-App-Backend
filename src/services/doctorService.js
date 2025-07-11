@@ -3,6 +3,7 @@ import db from "../models/index";
 import { where } from "sequelize";
 require("dotenv").config();
 import _, { includes, reject } from "lodash";
+import clinic from "../models/clinic";
 
 const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 let getTopDoctorHome = (limit) => {
@@ -112,6 +113,8 @@ let postInfoDoctor = (data) => {
           doctorInfo.nameClinic = data.nameClinic;
           doctorInfo.addressClinic = data.addressClinic;
           doctorInfo.note = data.note;
+          doctorInfo.specialtyId = data.specialtyId;
+          doctorInfo.clinicId = data.clinicId;
           await doctorInfo.save();
         } else {
           await db.Doctor_Info.create({
@@ -122,6 +125,8 @@ let postInfoDoctor = (data) => {
             nameClinic: data.nameClinic,
             addressClinic: data.addressClinic,
             note: data.note,
+            specialtyId: data.specialtyId,
+            clinicId: data.clinicId,
           });
         }
         resolve({
