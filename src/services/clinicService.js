@@ -60,6 +60,83 @@ let getAllClinic = async () => {
     }
   });
 };
+let editClinic = async (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (
+        !data.id ||
+        !data.name ||
+        !data.address ||
+        !data.imgBase64 ||
+        !data.descriptionHTML ||
+        !data.descriptionMarkdown
+      ) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameters",
+        });
+      } else {
+        let clinic = await db.Clinic.findOne({
+          where: { id: data.id },
+          raw: false,
+        });
+        if (clinic) {
+          clinic.name = data.name;
+          clinic.address = data.address;
+          clinic.image = data.imgBase64;
+          clinic.descriptionHTML = data.descriptionHTML;
+          clinic.descriptionMarkdown = data.descriptionMarkdown;
+
+          await clinic.save();
+          resolve({
+            errCode: 0,
+            errMessage: "Update clinic succeed",
+            clinic: clinic,
+          });
+        } else {
+          resolve({
+            errCode: 2,
+            errMessage: "Clinic not found",
+          });
+        }
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+let deleteClinic = async (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!id) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameters",
+        });
+      } else {
+        let clinic = await db.Clinic.findOne({
+          where: { id: id },
+        });
+        if (clinic) {
+          await db.Clinic.destroy({
+            where: { id: id },
+          });
+          resolve({
+            errCode: 0,
+            errMessage: "Delete clinic succeed",
+          });
+        } else {
+          resolve({
+            errCode: 2,
+            errMessage: "Clinic not found",
+          });
+        }
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 let getDetailClinicByID = async (id) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -104,4 +181,6 @@ module.exports = {
   createClinic: createClinic,
   getAllClinic: getAllClinic,
   getDetailClinicByID: getDetailClinicByID,
+  editClinic: editClinic,
+  deleteClinic: deleteClinic,
 };

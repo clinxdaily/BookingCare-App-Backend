@@ -38,6 +38,85 @@ let createSpecialty = async (data) => {
     }
   });
 };
+let editSpecialty = async (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!data.id) {
+        return resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter: id",
+        });
+      }
+
+      let specialty = await db.Specialty.findOne({
+        where: { id: data.id },
+        raw: false, // phải false để có instance .save()
+      });
+
+      if (!specialty) {
+        return resolve({
+          errCode: 2,
+          errMessage: "Specialty not found",
+        });
+      }
+
+      // Cập nhật có điều kiện
+      if (data.name !== undefined) specialty.name = data.name;
+      if (data.descriptionHTML !== undefined)
+        specialty.descriptionHTML = data.descriptionHTML;
+      if (data.descriptionMarkdown !== undefined)
+        specialty.descriptionMarkdown = data.descriptionMarkdown;
+      // Nếu người dùng không chọn ảnh mới thì đừng ghi đè rỗng
+      if (data.imgBase64 !== undefined && data.imgBase64 !== "")
+        specialty.image = data.imgBase64;
+
+      await specialty.save();
+
+      return resolve({
+        errCode: 0,
+        errMessage: "Update specialty succeed",
+        specialty,
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+let deleteSpecialty = async (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!id) {
+        return resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter: id",
+        });
+      }
+
+      let specialty = await db.Specialty.findOne({
+        where: { id: id },
+      });
+
+      if (!specialty) {
+        return resolve({
+          errCode: 2,
+          errMessage: "Specialty not found",
+        });
+      }
+
+      await db.Specialty.destroy({
+        where: { id: id },
+      });
+
+      return resolve({
+        errCode: 0,
+        errMessage: "Delete specialty succeed",
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
 let getAllSpecialty = async () => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -104,4 +183,6 @@ module.exports = {
   createSpecialty: createSpecialty,
   getAllSpecialty: getAllSpecialty,
   getDetailSpecialtyByID: getDetailSpecialtyByID,
+  editSpecialty: editSpecialty,
+  deleteSpecialty: deleteSpecialty,
 };
