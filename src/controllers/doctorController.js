@@ -20,6 +20,7 @@ let getAllDoctor = async (req, res) => {
     let doctors = await doctorService.getAllDoctor(); // gọi service để lấy tất cả bác sĩ
     return res.status(200).json(doctors);
   } catch (error) {
+    console.log("Error in handleGetAllDoctor: ", error);
     return res.status(200).json({
       errCode: -1, // mã lỗi 1 - có lỗi xảy ra
       message: "Error from server", // thông báo lỗi

@@ -41,20 +41,45 @@ let getTopDoctorHome = (limit) => {
     }
   });
 };
-let getAllDoctor = () => {
+let getAllDoctor = async () => {
   return new Promise(async (resolve, reject) => {
     try {
-      let doctor = await db.User.findAll({
-        where: { roleId: "R2" }, // R2 is the role for doctors
-        attributes: {
-          exclude: ["password", "image"], // Exclude password and image from the response
-        },
+      let doctors = await db.User.findAll({
+        where: { roleId: "R2" },
+        attributes: { exclude: ["password"] },
+        include: [
+          {
+            model: db.Allcode,
+            as: "positionData",
+            attributes: ["valueEn", "valueVi"],
+          },
+          {
+            model: db.Allcode,
+            as: "genderData",
+            attributes: ["valueEn", "valueVi"],
+          },
+        ],
+        raw: false,
+        nest: true,
       });
+
+      if (doctors && doctors.length > 0) {
+        doctors.map((item) => {
+          if (item) {
+            // Convert ảnh từ base64 -> data URI
+            item.image = Buffer.from(item.image, "base64").toString("binary");
+            return item;
+          }
+        });
+      }
+
       resolve({
         errCode: 0,
-        data: doctor,
+        errMessage: "Get all doctors succeed",
+        data: doctors,
       });
     } catch (error) {
+      console.error("Error in getAllDoctor: ", error);
       reject(error);
     }
   });

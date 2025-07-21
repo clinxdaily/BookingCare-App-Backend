@@ -21,53 +21,55 @@ let postBookAppointment = (data) => {
         !data.selectedGender ||
         !data.address
       ) {
-        resolve({
+        return resolve({
           errCode: 1,
           errMessage: "Missing required parameters",
         });
-      } else {
-        let token = uuidv4();
-        await emailService.sendSimpleEmail({
-          receiverEmail: data.email,
-          patientName: data.fullName,
-          time: data.timeString,
-          doctorName: data.doctorName,
-          language: data.language,
-          redirectLink: buildUrlEmail(data.doctorId, token),
-        });
-        let user = await db.User.findOrCreate({
-          where: { email: data.email },
-          defaults: {
-            email: data.email,
-            roleId: "R3",
-            address: data.address,
-            gender: data.selectedGender,
-            firstName: data.fullName,
-          },
-        });
-        if (user && user[0]) {
-          await db.Booking.findOrCreate({
-            where: { patientId: user[0].id },
-            defaults: {
-              statusId: "S1",
-              doctorId: data.doctorId,
-              patientId: user[0].id,
-              date: data.date,
-              timeType: data.timeType,
-              token: token,
-            },
-          });
-        }
-        resolve({
-          errCode: 0,
-          errMessage: "Save info patient sucess",
-        });
       }
+
+      let token = uuidv4();
+      await emailService.sendSimpleEmail({
+        receiverEmail: data.email,
+        patientName: data.fullName,
+        time: data.timeString,
+        doctorName: data.doctorName,
+        language: data.language,
+        redirectLink: buildUrlEmail(data.doctorId, token),
+      });
+
+      // Tìm hoặc tạo user mới
+      let [user] = await db.User.findOrCreate({
+        where: { email: data.email },
+        defaults: {
+          email: data.email,
+          roleId: "R3",
+          address: data.address,
+          gender: data.selectedGender,
+          firstName: data.fullName,
+        },
+      });
+
+      // Luôn tạo mới booking (cho phép nhiều lịch với cùng email)
+      await db.Booking.create({
+        statusId: "S1",
+        doctorId: data.doctorId,
+        patientId: user.id,
+        date: data.date,
+        timeType: data.timeType,
+        token: token,
+        patientName: data.fullName, // nên thêm cột này để phân biệt ai đi khám
+      });
+
+      resolve({
+        errCode: 0,
+        errMessage: "Save info patient success",
+      });
     } catch (error) {
       reject(error);
     }
   });
 };
+
 let postVerifyBookAppointment = (data) => {
   return new Promise(async (resolve, reject) => {
     try {

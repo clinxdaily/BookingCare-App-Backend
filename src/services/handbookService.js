@@ -137,10 +137,46 @@ let getAllHandbook = async () => {
     }
   });
 };
+let getDetailHandbookByID = async (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!id) {
+        resolve({
+          errCode: 1,
+          errMessage: "Missing required parameter: id",
+        });
+      } else {
+        let data = await db.Handbook.findOne({
+          where: { id: id },
+          attributes: [
+            "name",
+            "descriptionHTML",
+            "descriptionMarkdown",
+            "image",
+          ],
+        });
+
+        if (data) {
+          data.image = Buffer.from(data.image, "base64").toString("binary");
+        } else {
+          data = {};
+        }
+
+        resolve({
+          errCode: 0,
+          data,
+        });
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
 module.exports = {
   createHandbook,
   editHandbook,
   deleteHandbook,
   getAllHandbook,
+  getDetailHandbookByID,
 };

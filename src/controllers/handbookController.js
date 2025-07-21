@@ -39,10 +39,20 @@ let getAllHandbook = async (req, res) => {
       .json({ errCode: -1, errMesssage: "Error from server" });
   }
 };
-
+let getDetailHandbookByID = async (req, res) => {
+  try {
+    let response = await handbookService.getDetailHandbookByID(req.query.id);
+    return res.status(200).json(response);
+  } catch (error) {
+    return res
+      .status(200)
+      .json({ errCode: -1, errMesssage: "Error from server" });
+  }
+};
 module.exports = {
   createHandbook: createHandbook,
   editHandbook: editHandbook,
   deleteHandbook: deleteHandbook,
   getAllHandbook: getAllHandbook,
+  getDetailHandbookByID: getDetailHandbookByID,
 };
