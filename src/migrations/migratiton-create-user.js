@@ -32,6 +32,9 @@ module.exports = {
       phonenumber: {
         type: Sequelize.STRING,
       },
+      cccd: {
+        type: Sequelize.STRING,
+      },
       positionId: {
         type: Sequelize.STRING,
       },

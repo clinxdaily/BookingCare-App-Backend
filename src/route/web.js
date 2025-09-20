@@ -4,7 +4,6 @@ import userController from "../controllers/userController";
 import doctorController from "../controllers/doctorController";
 import patientController from "../controllers/patientController";
 import specialtyController from "../controllers/specialtyController";
-import clinicController from "../controllers/clinicController";
 import handbookController from "../controllers/handbookController";
 let router = express.Router();
 let initWebRoutes = (app) => {
@@ -30,6 +29,10 @@ let initWebRoutes = (app) => {
     doctorController.getDetailDoctorById
   );
   router.post("/api/bulk_create_schedule", doctorController.bulkCreateSchedule);
+  router.post(
+    "/api/delete-schedule-doctor_by_id",
+    doctorController.deleteScheduleDoctorById
+  );
   router.get(
     "/api/get-schedule-doctor_by_date",
     doctorController.getScheduleDoctorByDate
@@ -42,11 +45,27 @@ let initWebRoutes = (app) => {
     "/api/get-profile-doctor_by_id",
     doctorController.getProfileDoctorById
   );
+
   router.get(
     "/api/get-list-patient-for-doctor",
     doctorController.getListPatientForDoctor
   );
   router.post("/api/send-remedy", doctorController.sendRemedy);
+  router.post(
+    "/api/get-remedy-by-booking",
+    doctorController.handleGetRemedyByBooking
+  );
+  router.post("/api/cancel-appointment", doctorController.cancelAppointment);
+  router.get(
+    "/api/get-history-appointment",
+    doctorController.getHistoryAppointment
+  );
+  router.get("/api/get-revenue", doctorController.getRevenue);
+
+  router.post(
+    "/api/delete-history-appointment",
+    doctorController.deleteHistoryAppointment
+  );
   router.post(
     "/api/patient-book-appointment",
     patientController.postBookAppointment
@@ -75,14 +94,6 @@ let initWebRoutes = (app) => {
   //
 
   //
-  router.post("/api/create-new-clinic", clinicController.createClinic);
-  router.get("/api/get-all-clinic", clinicController.getAllClinic);
-  router.post("/api/edit-clinic", clinicController.editClinic);
-  router.delete("/api/delete-clinic", clinicController.deleteClinic);
-  router.get(
-    "/api/get-detail-clinic-by-id",
-    clinicController.getDetailClinicByID
-  );
 
   return app.use("/", router);
 };

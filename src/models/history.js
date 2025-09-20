@@ -1,27 +1,30 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class History extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      History.belongsTo(models.Booking, {
+        foreignKey: "bookingId",
+        as: "bookingData",
+      });
     }
-  };
-  History.init({
-    
-    patientId: DataTypes.INTEGER,
-    doctorId: DataTypes.INTEGER,
-    description: DataTypes.TEXT,
-    files: DataTypes.TEXT
-  }, {
-    sequelize,
-    modelName: 'History',
-  });
+  }
+  History.init(
+    {
+      bookingId: DataTypes.INTEGER,
+      patientId: DataTypes.INTEGER,
+      doctorId: DataTypes.INTEGER,
+      type: DataTypes.STRING,
+      description: DataTypes.TEXT,
+      initialDiagnosis: DataTypes.TEXT,
+      conclusion: DataTypes.TEXT,
+      medicines: DataTypes.TEXT, // JSON stringify danh sách thuốc
+      images: DataTypes.TEXT, // JSON stringify danh sách ảnh base64 hoặc URL
+    },
+    {
+      sequelize,
+      modelName: "History",
+    }
+  );
   return History;
 };

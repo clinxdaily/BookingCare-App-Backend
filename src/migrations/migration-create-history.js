@@ -1,39 +1,56 @@
-'use strict';
+"use strict";
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('histories', {
-        // patientId: DataTypes.INTEGER,
-        // doctorId: DataTypes.INTEGER,
-        // description: DataTypes.TEXT
+    await queryInterface.createTable("histories", {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+      },
+      bookingId: {
+        type: Sequelize.INTEGER,
+        references: {
+          model: "Bookings", // name of the table
+          key: "id", // key in the referenced table
+        },
+        onDelete: "CASCADE", // optional, define behavior on delete
       },
       patientId: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       doctorId: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+      },
+      type: {
+        type: Sequelize.STRING,
       },
       description: {
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
       },
-      files: {
-        type: Sequelize.TEXT
+      initialDiagnosis: {
+        type: Sequelize.TEXT,
+      },
+      conclusion: {
+        type: Sequelize.TEXT,
+      },
+      medicines: {
+        type: Sequelize.TEXT, // JSON string
+      },
+      images: {
+        type: Sequelize.TEXT, // JSON string
       },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE
-      }
+        type: Sequelize.DATE,
+      },
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('histories');
-  }
+    await queryInterface.dropTable("histories");
+  },
 };

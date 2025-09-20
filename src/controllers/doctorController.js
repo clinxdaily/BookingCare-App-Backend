@@ -117,6 +117,125 @@ let sendRemedy = async (req, res) => {
       .json({ errCode: -1, errMesssage: "Error from server" });
   }
 };
+let handleGetRemedyByBooking = async (req, res) => {
+  try {
+    let response = await doctorService.getRemedyByBooking(req.body);
+    return res.status(200).json(response);
+  } catch (error) {
+    console.error("Error in handleGetRemedyByBooking:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Error from server",
+    });
+  }
+};
+let deleteScheduleDoctorById = async (req, res) => {
+  try {
+    const { doctorId, date, timeType } = req.body;
+
+    console.log("doctorId:", doctorId, "date:", date, "timeType:", timeType);
+
+    let response = await doctorService.deleteScheduleDoctorById(req.body);
+
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Error from server",
+    });
+  }
+};
+let cancelAppointment = async (req, res) => {
+  try {
+    const { doctorId, patientId, timeType, date, reason } = req.body;
+
+    if (!doctorId || !patientId || !timeType || !date) {
+      return res.status(400).json({
+        errCode: 1,
+        errMessage: "Missing required parameters",
+      });
+    }
+
+    const result = await doctorService.cancelAppointmentByDoctor({
+      doctorId,
+      patientId,
+      timeType,
+      date,
+      reason,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in cancelAppointment:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Error from server",
+    });
+  }
+};
+let getHistoryAppointment = async (req, res) => {
+  try {
+    const data = await doctorService.getHistoryAppointment(req.query.doctorId);
+    return res.status(200).json(data);
+  } catch (e) {
+    return res
+      .status(500)
+      .json({ errCode: -1, errMessage: "Error from server" });
+  }
+};
+let deleteHistoryAppointment = async (req, res) => {
+  try {
+    const { doctorId, patientId, timeType, date } = req.body;
+
+    if (!doctorId || !patientId || !timeType || !date) {
+      return res.status(400).json({
+        errCode: 1,
+        errMessage: "Missing required parameters",
+      });
+    }
+
+    const result = await doctorService.deleteAppointment({
+      doctorId,
+      patientId,
+      timeType,
+      date,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in deleteHistoryAppointment:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Error from server",
+    });
+  }
+};
+let getRevenue = async (req, res) => {
+  try {
+    const { doctorId, date, filterType } = req.query;
+
+    if (!doctorId || !date) {
+      return res.status(400).json({
+        errCode: 1,
+        errMessage: "Missing required parameters",
+      });
+    }
+
+    const revenueData = await doctorService.getRevenue(
+      doctorId,
+      date,
+      filterType
+    );
+
+    return res.status(200).json(revenueData);
+  } catch (error) {
+    console.error("Error in getRevenue:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Error from server",
+    });
+  }
+};
 module.exports = {
   getTopDoctorHome: getTopDoctorHome,
   getAllDoctor: getAllDoctor,
@@ -128,4 +247,10 @@ module.exports = {
   getProfileDoctorById: getProfileDoctorById,
   getListPatientForDoctor: getListPatientForDoctor,
   sendRemedy: sendRemedy,
+  deleteScheduleDoctorById: deleteScheduleDoctorById,
+  cancelAppointment: cancelAppointment,
+  getHistoryAppointment: getHistoryAppointment,
+  deleteHistoryAppointment: deleteHistoryAppointment,
+  getRevenue: getRevenue,
+  handleGetRemedyByBooking: handleGetRemedyByBooking,
 };

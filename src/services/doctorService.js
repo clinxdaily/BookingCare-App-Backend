@@ -2,8 +2,8 @@ import { raw } from "body-parser";
 import db from "../models/index";
 import { where } from "sequelize";
 require("dotenv").config();
+const moment = require("moment-timezone");
 import _, { includes, reject } from "lodash";
-import clinic from "../models/clinic";
 import emailService from "./emailService";
 const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 let getTopDoctorHome = (limit) => {
@@ -95,8 +95,6 @@ let postInfoDoctor = (data) => {
         !data.selectedPrice ||
         !data.selectedPayment ||
         !data.selectedProvince ||
-        !data.nameClinic ||
-        !data.addressClinic ||
         !data.note
       ) {
         resolve({
@@ -135,11 +133,8 @@ let postInfoDoctor = (data) => {
           doctorInfo.priceId = data.selectedPrice;
           doctorInfo.provinceId = data.selectedProvince;
           doctorInfo.paymentId = data.selectedPayment;
-          doctorInfo.nameClinic = data.nameClinic;
-          doctorInfo.addressClinic = data.addressClinic;
           doctorInfo.note = data.note;
           doctorInfo.specialtyId = data.specialtyId;
-          doctorInfo.clinicId = data.clinicId;
           await doctorInfo.save();
         } else {
           await db.Doctor_Info.create({
@@ -147,11 +142,8 @@ let postInfoDoctor = (data) => {
             priceId: data.selectedPrice,
             provinceId: data.selectedProvince,
             paymentId: data.paymentId,
-            nameClinic: data.nameClinic,
-            addressClinic: data.addressClinic,
             note: data.note,
             specialtyId: data.specialtyId,
-            clinicId: data.clinicId,
           });
         }
         resolve({
@@ -435,7 +427,7 @@ let getListPatientForDoctor = (doctorId, date) => {
       } else {
         let data = await db.Booking.findAll({
           where: {
-            statusId: "S2", // S2 is the status for confirmed appointments
+            statusId: ["S2"], // Thêm S3
             doctorId: doctorId,
             date: date,
           },
@@ -443,7 +435,13 @@ let getListPatientForDoctor = (doctorId, date) => {
             {
               model: db.User,
               as: "patientData",
-              attributes: ["firstName", "address", "email", "gender"],
+              attributes: [
+                "firstName",
+                "address",
+                "email",
+                "gender",
+                "phonenumber",
+              ],
               include: [
                 {
                   model: db.Allcode,
@@ -461,9 +459,8 @@ let getListPatientForDoctor = (doctorId, date) => {
           raw: false,
           nest: true,
         });
-        if (!data) {
-          data = [];
-        }
+
+        if (!data) data = [];
         resolve({ errCode: 0, data: data });
       }
     } catch (error) {
@@ -471,46 +468,404 @@ let getListPatientForDoctor = (doctorId, date) => {
     }
   });
 };
+
 let sendRemedy = (data) => {
   return new Promise(async (resolve, reject) => {
     try {
-      if (
-        !data.email ||
-        !data.doctorId ||
-        !data.patientId ||
-        !data.timeType ||
-        !data.imgBase64
-      ) {
-        resolve({
+      const { email, doctorId, patientId, timeType, type } = data;
+
+      // Validate các trường bắt buộc
+      if (!email || !doctorId || !patientId || !timeType || !type) {
+        return resolve({
           errCode: 1,
           errMessage: "Missing required parameters",
         });
-      } else {
-        // Update the booking status to S3 (sent remedy)
-        let booking = await db.Booking.findOne({
-          where: {
-            patientId: data.patientId,
-            doctorId: data.doctorId,
-            timeType: data.timeType,
-            statusId: "S2", // S2 is the status for confirmed appointments
-          },
-          raw: false,
-        });
-        if (booking) {
-          booking.statusId = "S3"; // S3 is the status for sent remedy
-          await booking.save();
-        }
-        await emailService.sendAttachmentEmail(data);
-        resolve({
-          errCode: 0,
-          errMessage: "Send remedy successfully",
-        });
       }
+
+      // Validate theo loại đơn thuốc
+      if (type === "image") {
+        if (
+          !data.imgBase64List ||
+          !Array.isArray(data.imgBase64List) ||
+          data.imgBase64List.length === 0
+        ) {
+          return resolve({
+            errCode: 1,
+            errMessage: "Missing image data",
+          });
+        }
+      } else if (type === "manual") {
+        if (
+          !data.medicines ||
+          !Array.isArray(data.medicines) ||
+          data.medicines.length === 0 ||
+          !data.initialDiagnosis ||
+          !data.conclusion
+        ) {
+          return resolve({
+            errCode: 1,
+            errMessage: "Missing manual remedy data",
+          });
+        }
+
+        // Validate từng thuốc trong đơn
+        const isValidMedicines = data.medicines.every((med) => {
+          return med.name && med.quantity && med.unit && med.time;
+        });
+
+        if (!isValidMedicines) {
+          return resolve({
+            errCode: 1,
+            errMessage:
+              "Each medicine must have name, quantity, unit, and time",
+          });
+        }
+      }
+
+      // Tìm booking đang chờ xác nhận (statusId = S2)
+      let booking = await db.Booking.findOne({
+        where: {
+          patientId,
+          doctorId,
+          timeType,
+          statusId: "S2",
+        },
+        raw: false,
+      });
+
+      if (booking) {
+        booking.statusId = "S3"; // Đã gửi đơn thuốc
+        await booking.save();
+      }
+
+      // Gửi email đơn thuốc
+      await emailService.sendAttachmentEmail(data);
+
+      // Lưu vào bảng History
+      await db.History.create({
+        bookingId: booking.id,
+        patientId: patientId,
+        doctorId: doctorId,
+        type: type,
+        description: "", // Có thể mở rộng nội dung mô tả thêm nếu muốn
+        initialDiagnosis: data.initialDiagnosis || "",
+        conclusion: data.conclusion || "",
+        medicines: type === "manual" ? JSON.stringify(data.medicines) : null,
+        images: type === "image" ? JSON.stringify(data.imgBase64List) : null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return resolve({
+        errCode: 0,
+        errMessage: "Send remedy successfully",
+      });
     } catch (error) {
-      reject(error);
+      return reject(error);
     }
   });
 };
+let getRemedyByBooking = async (data) => {
+  try {
+    const { bookingId } = data;
+
+    if (!bookingId) {
+      return {
+        errCode: 1,
+        errMessage: "Missing bookingId",
+      };
+    }
+
+    let booking = await db.Booking.findOne({
+      where: { id: bookingId, statusId: "S3" }, // chỉ lấy nếu đã khám
+      include: [
+        {
+          model: db.History,
+          as: "historyData", // alias đã khai báo trong association
+        },
+      ],
+      raw: false,
+      nest: true,
+    });
+
+    if (!booking || !booking.historyData) {
+      return {
+        errCode: 2,
+        errMessage: "Remedy not found",
+      };
+    }
+
+    return {
+      errCode: 0,
+      data: booking.historyData,
+    };
+  } catch (e) {
+    console.error(e);
+    return {
+      errCode: -1,
+      errMessage: "Error from server",
+    };
+  }
+};
+
+let deleteScheduleDoctorById = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const { doctorId, date, timeType } = data;
+
+      if (!doctorId || !date || !timeType) {
+        return resolve({
+          errCode: 1,
+          errMessage: "Missing required parameters",
+        });
+      }
+
+      await db.Schedule.destroy({
+        where: {
+          doctorId,
+          date,
+          timeType,
+        },
+      });
+
+      return resolve({
+        errCode: 0,
+        errMessage: "Deleted schedule successfully",
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+let cancelAppointmentByDoctor = async (data) => {
+  try {
+    let { doctorId, patientId, timeType, date, reason } = data;
+
+    let appointment = await db.Booking.findOne({
+      where: {
+        doctorId: doctorId,
+        patientId: patientId,
+        timeType: timeType,
+        date: date,
+        statusId: "S2",
+      },
+      raw: false,
+    });
+
+    if (!appointment) {
+      return {
+        errCode: 2,
+        errMessage: "Appointment not found or already canceled",
+      };
+    }
+
+    appointment.statusId = "S4";
+    appointment.reason = reason || null;
+    await appointment.save();
+
+    // Optional: Gửi email thông báo cho bệnh nhân nếu muốn
+    // const patient = await db.User.findOne({ where: { id: patientId } });
+    // await emailService.sendCancellationEmail(...);
+
+    return {
+      errCode: 0,
+      errMessage: "Cancel appointment successfully",
+    };
+  } catch (e) {
+    console.log("Error in cancelAppointmentByDoctor:", e);
+    return {
+      errCode: -1,
+      errMessage: "Error from server",
+    };
+  }
+};
+const getHistoryAppointment = async (doctorId) => {
+  try {
+    if (!doctorId) return { errCode: 1, errMessage: "Missing doctorId" };
+
+    const appointments = await db.Booking.findAll({
+      where: {
+        doctorId: doctorId,
+        statusId: ["S3", "S4"],
+      },
+      include: [
+        {
+          model: db.User,
+          as: "patientData",
+          attributes: [
+            "firstName",
+            "lastName",
+            "email",
+            "address",
+            "gender",
+            "phonenumber",
+          ],
+          include: [
+            {
+              model: db.Allcode,
+              as: "genderData",
+              attributes: ["valueEn", "valueVi"],
+            },
+          ],
+        },
+        {
+          model: db.Allcode,
+          as: "timeTypeDataPatient",
+          attributes: ["valueEn", "valueVi"],
+        },
+      ],
+      raw: false,
+      nest: true,
+    });
+
+    return {
+      errCode: 0,
+      data: appointments,
+    };
+  } catch (error) {
+    console.error("Error in getHistoryAppointment:", error);
+    throw error;
+  }
+};
+let deleteAppointment = (data) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!data.doctorId || !data.patientId || !data.timeType || !data.date) {
+        return resolve({
+          errCode: 1,
+          errMessage: "Missing required parameters",
+        });
+      }
+
+      let booking = await db.Booking.findOne({
+        where: {
+          doctorId: data.doctorId,
+          patientId: data.patientId,
+          timeType: data.timeType,
+          date: data.date,
+        },
+        raw: false,
+      });
+
+      if (!booking) {
+        return resolve({
+          errCode: 2,
+          errMessage: "Không tìm thấy lịch khám",
+        });
+      }
+
+      await booking.destroy();
+
+      resolve({
+        errCode: 0,
+        errMessage: "Xóa lịch khám thành công",
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
+
+const getRevenue = async (doctorId, date, type = "date") => {
+  try {
+    if (!doctorId || !date || !["date", "month", "year"].includes(type)) {
+      return {
+        errCode: 1,
+        errMessage: "Missing or invalid parameters",
+      };
+    }
+
+    // Lấy thông tin bác sĩ + giá tiền
+    const doctorInfo = await db.Doctor_Info.findOne({
+      where: { doctorId: parseInt(doctorId) },
+      include: [
+        {
+          model: db.Allcode,
+          as: "priceTypeData",
+          attributes: ["valueVi"],
+        },
+      ],
+      raw: true,
+      nest: true,
+    });
+
+    if (!doctorInfo || !doctorInfo.priceTypeData?.valueVi) {
+      return { errCode: 2, errMessage: "Doctor or pricing not found" };
+    }
+
+    const priceString = doctorInfo.priceTypeData.valueVi.toString();
+    const numericPrice = parseFloat(priceString.replace(/[^\d]/g, "")) || 0;
+
+    // Tạo mốc thời gian theo múi giờ Việt Nam
+    const inputDate = moment.tz(parseInt(date), "Asia/Ho_Chi_Minh");
+    let startDate, endDate;
+    if (type === "month") {
+      startDate = inputDate
+        .clone()
+        .tz("Asia/Ho_Chi_Minh", true)
+        .startOf("month")
+        .valueOf();
+      endDate = inputDate
+        .clone()
+        .tz("Asia/Ho_Chi_Minh", true)
+        .endOf("month")
+        .valueOf();
+    } else if (type === "year") {
+      startDate = inputDate
+        .clone()
+        .tz("Asia/Ho_Chi_Minh", true)
+        .startOf("year")
+        .valueOf();
+      endDate = inputDate
+        .clone()
+        .tz("Asia/Ho_Chi_Minh", true)
+        .endOf("year")
+        .valueOf();
+    } else {
+      startDate = inputDate
+        .clone()
+        .tz("Asia/Ho_Chi_Minh", true)
+        .startOf("day")
+        .valueOf();
+      endDate = inputDate
+        .clone()
+        .tz("Asia/Ho_Chi_Minh", true)
+        .endOf("day")
+        .valueOf();
+    }
+
+    // Lấy các lịch đã khám thành công (S3) trong khoảng thời gian
+    const bookings = await db.Booking.findAll({
+      where: {
+        doctorId: parseInt(doctorId),
+        statusId: "S3",
+        date: {
+          [db.Sequelize.Op.between]: [startDate, endDate],
+        },
+      },
+    });
+
+    const totalAppointments = bookings.length;
+    const totalRevenue = totalAppointments * numericPrice;
+
+    return {
+      errCode: 0,
+      data: {
+        totalAppointments,
+        totalRevenue,
+        pricePerAppointment: numericPrice,
+        currency: "VND",
+      },
+    };
+  } catch (error) {
+    console.error("Revenue calculation error:", error);
+    return {
+      errCode: -1,
+      errMessage: "Internal server error. Please try again later.",
+    };
+  }
+};
+
 module.exports = {
   getTopDoctorHome,
   getAllDoctor,
@@ -522,4 +877,10 @@ module.exports = {
   getProfileDoctorById,
   getListPatientForDoctor,
   sendRemedy,
+  deleteScheduleDoctorById,
+  cancelAppointmentByDoctor,
+  getHistoryAppointment,
+  deleteAppointment,
+  getRevenue,
+  getRemedyByBooking,
 };

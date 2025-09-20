@@ -14,9 +14,13 @@ module.exports = (sequelize, DataTypes) => {
         as: "patientData", // alias for association
       });
       Booking.belongsTo(models.Allcode, {
-        foreignKey: "timeType", // foreign key in Booking table
+        foreignKey: "timeType",
         targetKey: "keyMap",
-        as: "timeTypeDataPatient", // alias for association
+        as: "timeTypeDataPatient",
+      });
+      Booking.hasOne(models.History, {
+        foreignKey: "bookingId",
+        as: "historyData",
       });
     }
   }
@@ -26,6 +30,7 @@ module.exports = (sequelize, DataTypes) => {
       doctorId: DataTypes.INTEGER,
       patientId: DataTypes.INTEGER,
       date: DataTypes.STRING,
+      reason: DataTypes.STRING,
       timeType: DataTypes.STRING,
       token: DataTypes.STRING,
     },
